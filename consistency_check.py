@@ -100,6 +100,21 @@ def main():
             if l not in names:
                 issues.append(f"[死链:{f.name}] → {l}")
 
+    # ── 5b. 模式编号引用有效性（Mxx / Mxx-n）───────
+    pats = set()
+    for l in (SK / "patterns.md").read_text(encoding="utf-8").split("\n"):
+        mm = re.match(r"^## (M\d+)\.", l)
+        if mm:
+            pats.add(mm.group(1))
+    for f in list(SK.glob("*.md")) + list(CH.glob("*.md")):
+        txt = f.read_text(encoding="utf-8")
+        for m in re.finditer(r"\b(M\d+)(?:-(\d+))?\b", txt):
+            base, sub = m.group(1), m.group(2)
+            if base not in pats:
+                issues.append(f"[死指针:{f.name}] 引用了不存在的模式 {m.group(0)}")
+            elif sub:
+                issues.append(f"[可疑指针:{f.name}] {m.group(0)} 指向具体条目，确认该条目存在")
+
     # ── 6. 内容厚度 ───────────────────────────────
     for m in meta:
         fn = CH / f"ch{m['id']:03d}-{slug(m['title'])}.md"
